@@ -31,7 +31,7 @@ const options: ISourceOptions = {
 
 <template>
     <vue-particles id="tsparticles" :options="options" />
-    <div class="w-screen min-h-screen bg-black flex items-center justify-center -z-50" id="bg">
+    <div class="w-screen min-h-screen bg-black flex items-center justify-center -z-50 dark" id="bg">
         <RouterView />
     </div>
 </template>
