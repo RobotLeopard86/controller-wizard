@@ -1,9 +1,10 @@
 import type { Button, Instance, Mapping, Scheme } from "./schema";
 import fileSaver from "file-saver";
+import templateURL from "./diagram_template.svg";
 
 export const exportProject = (inst: Instance) => {
 	inst.forEach(async(scheme: Scheme) => {
-		const template = await (await fetch("/diagram_template.svg")).text();
+		const template = await (await fetch(templateURL)).text();
 		const templateDoc = new DOMParser().parseFromString(template, "image/svg+xml");
 
 		templateDoc.querySelector("#title")!.innerHTML = scheme.name;
