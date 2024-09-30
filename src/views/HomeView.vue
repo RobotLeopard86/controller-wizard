@@ -25,8 +25,9 @@
 
 <template>
     <div class="rounded-md bg-slate-800 py-4 px-6 flex flex-col items-center justify-center w-1/3 z-40">
+        <img src="/favicon.ico" alt="Logo" class="w-1/3"/>
         <h1 class="font-black text-3xl text-white text-center">Controller Wizard</h1>
-        <FwbButton color="yellow" class="mt-4" @click="open">Open</FwbButton>
-        <FwbButton color="yellow" class="mt-4" @click="newDiagram">New</FwbButton>
+        <FwbButton color="yellow" class="mt-4" @click="newDiagram">New Diagram</FwbButton>
+        <FwbButton color="yellow" class="mt-4" @click="open">Open From File</FwbButton>
     </div>
 </template>

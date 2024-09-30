@@ -5,7 +5,7 @@
 	import type { Button, Instance, Mapping, Scheme } from "@/schema";
 	import router from "@/router";
 	import fileSaver from "file-saver";
-	import { useFileDialog } from "@vueuse/core";
+	import { exportProject } from "@/exporter";
 
 	const store = useStore();
 
@@ -114,7 +114,7 @@
 				data.value[i] = selectedScheme.value;
 			}
 		});
-		newMapTrigger.value = 'A';
+		newMapTrigger.value = getOkTriggers()[0];
 		newMapLabel.value = "";
 	}
 
@@ -124,6 +124,8 @@
        		router.push('/');
 		}
 	}
+
+	const newMapOK = computed(() => getOkTriggers().length > 0);
 </script>
 
 <template>
@@ -136,7 +138,7 @@
 				<FwbListGroupItem v-for="scheme in data" class="grid grid-cols-3 gap-3">
 					<div><span>{{ scheme.name }}</span></div>
 					<div class="col-span-2 flex items-center justify-end">
-						<svg @click="() => rmScheme(scheme.name)" class="w-6 h-6 text-red-900" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+						<svg @click="() => rmScheme(scheme.name)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
 							<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
 						</svg>
 					</div>
@@ -153,18 +155,18 @@
 
 	<div class="grid grid-cols-3 min-h-screen w-screen gap-8">
 		<div class="bg-slate-900 rounded-xl backdrop-opacity-100 h-full my-auto grid grid-cols-1 grid-rows-5">
-			<div class="row-span-4 overflow-y-scroll">
+			<div class="row-span-4">
 				<h1 class="font-extrabold text-3xl text-white text-center">{{  selectedScheme.name }}</h1>
-				<FwbListGroup class="min-w-full min-h-full" v-if="!isNullScheme">
+				<FwbListGroup class="min-w-full min-h-full overflow-y-scroll" v-if="!isNullScheme">
 					<FwbListGroupItem v-for="mapping in selectedScheme.mappings" class="grid grid-cols-3 gap-3">
 						<div><span>{{ mapping.trigger }} -> {{ mapping.action }}</span></div>
 						<div class="col-span-2 flex items-center justify-end">
-							<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-900" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+							<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
 								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
 							</svg>
 						</div>
 					</FwbListGroupItem>
-					<FwbListGroupItem class="grid grid-cols-3 gap-3">
+					<FwbListGroupItem class="grid grid-cols-3 gap-3" v-if="newMapOK">
 						<FwbDropdown placement="bottom" v-bind:text="newMapTriggerDisplay" close-inside color="yellow">
 							<FwbListGroup class="overflow-y-scroll max-h-48">
 								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t">
@@ -198,7 +200,7 @@
 							<span @click="saveToJson">Save as Project File</span>
 						</FwbListGroupItem>
 						<FwbListGroupItem>
-							<span>Export</span>
+							<span @click="() => exportProject(data)">Export</span>
 						</FwbListGroupItem>
 					</FwbListGroup>
 				</FwbDropdown>
