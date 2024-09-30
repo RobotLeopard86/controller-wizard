@@ -14,3 +14,6 @@ what humans think is impossible.
 _yawns_
 
 ok im done bye
+
+## Oh, So You Want To Use It?
+Okay so install Node.js and NPM, clone the repo, open it in terminal, `npm i`, `npm run build`, and, ta-da, it's in the `dist` folder. It's fully client side you can host it with a static HTTP server. Now go away.
