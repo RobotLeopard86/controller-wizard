@@ -207,7 +207,7 @@
 			</div>
 		</div>
 		<div class="col-span-2 rounded-xl h-5/6 my-auto flex flex-col items-center justify-center">
-			<img src="/controller.png" alt="Controller" class="w-2/3 h-5/6"/>
+			<img src="/controller.png" alt="Controller" class="aspect-auto w-2/3"/>
 		</div>
 		<FwbButton color="red" class="absolute right-0" @click="exit">X</FwbButton>
 	</div>
