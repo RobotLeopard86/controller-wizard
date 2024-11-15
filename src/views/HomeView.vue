@@ -1,9 +1,13 @@
 <script setup lang="ts">
-    import { FwbButton } from "flowbite-vue";
+    import { FwbButton, FwbCheckbox } from "flowbite-vue";
     import { useFileDialog } from "@vueuse/core";
     import router from "@/router";
     import { useStore } from "vuex";
     import type { Instance } from "@/schema";
+    import { type Ref, type ComputedRef, ref, computed } from "vue";
+
+    let useNewEditor: Ref<boolean> = ref(false);
+    let editorRoute: ComputedRef<string> = computed(() => useNewEditor.value ? "/editornew" : "/editor");
 
     const { files, open, onChange } = useFileDialog({
         accept: 'text/json',
@@ -14,12 +18,12 @@
 
     onChange(async(files) => {
         store.commit('manipulate', JSON.parse(await files?.item(0)?.text()!) as Instance);
-        router.replace("/editor");
+        router.replace(editorRoute.value);
     });
 
     const newDiagram = () => {
         store.commit('manipulate', [] as Instance);
-        router.replace('/editor');
+        router.replace(editorRoute.value);
     }
 </script>
 
@@ -30,4 +34,5 @@
         <FwbButton color="yellow" class="mt-4" @click="newDiagram">New Diagram</FwbButton>
         <FwbButton color="yellow" class="mt-4" @click="open">Open From File</FwbButton>
     </div>
+    <FwbCheckbox v-model="useNewEditor" label="Use new editor" class="absolute left-0 bottom-0"/>
 </template>

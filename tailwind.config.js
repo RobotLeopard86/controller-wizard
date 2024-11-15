@@ -1,3 +1,5 @@
+import flowbite from "flowbite/plugin";
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	content: [
@@ -7,7 +9,7 @@ export default {
 		'./src/**/*.{vue,js,ts,jsx,tsx}'
 	],
 	plugins: [
-			require('flowbite/plugin')
+		flowbite	
 	],
 	theme: {},
 	darkMode: 'selector'
