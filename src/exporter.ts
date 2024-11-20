@@ -1,6 +1,7 @@
 import type { Button, Instance, Mapping, Scheme } from "./schema";
 import fileSaver from "file-saver";
 import templateURL from "./diagram_template.svg";
+import { Canvg } from "canvg";
 
 export const exportProject = (inst: Instance) => {
 	inst.forEach(async(scheme: Scheme) => {
@@ -38,7 +39,13 @@ export const exportProject = (inst: Instance) => {
 		let baseOut: string = templateDoc.documentElement.innerHTML;
 		const out = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\">" + baseOut + "</svg>";
 
-		let outFname: string = scheme.name.replace(" ", "_") + ".svg";
-		fileSaver.saveAs(new Blob([out]), outFname);
+		const canvas = new OffscreenCanvas(800, 500);
+		const ctx = canvas.getContext("2d")!;
+		const renderer = Canvg.fromString(ctx, out, {ignoreMouse: true, ignoreAnimation: true});
+		await renderer.render();
+		const pngBlob = await canvas.convertToBlob();
+		
+		const filename = scheme.name + ".png";
+		fileSaver.saveAs(pngBlob, filename);
 	});
 };

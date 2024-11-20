@@ -1,7 +1,7 @@
 <script setup lang="ts">
 	import { useStore } from "vuex";
-	import { computed, onBeforeMount, ref, type ComputedRef, type Ref } from "vue";
-	import { FwbDropdown, FwbListGroup, FwbListGroupItem, FwbButton, FwbModal, FwbInput } from "flowbite-vue";
+	import { computed, onBeforeMount, onMounted, ref, type ComputedRef, type Ref } from "vue";
+	import { FwbDropdown, FwbListGroup, FwbListGroupItem, FwbButton, FwbModal, FwbInput, FwbNavbar } from "flowbite-vue";
 	import type { Button, Instance, Mapping, Scheme } from "@/schema";
 	import router from "@/router";
 	import fileSaver from "file-saver";
@@ -12,10 +12,25 @@
 	const data: ComputedRef<Instance> = computed(() => store.state.value);
 
 	const showManageDialog: Ref<boolean> = ref(false);
+	const showExitDialog: Ref<boolean> = ref(false);
+	const showExportDialog: Ref<boolean> = ref(false);
+
+	const selectedTrigger: Ref<string> = ref("NONE");
+	const controller: ComputedRef<string> = computed(() => import.meta.env.BASE_URL + "controllers/" + selectedTrigger.value.replace(/\s+/g, '-').toLowerCase() + ".png");
+	
 	const selectedScheme: Ref<Scheme> = ref({ name: 'NO SCHEME', mappings: [] });
 	const isNullScheme: ComputedRef<boolean> = computed(() => selectedScheme.value.name === 'NO SCHEME');
 
-	const showmdiag = () => { showManageDialog.value = true; }
+	const kebabTrigger = (trigger: Button): string => {
+		return trigger.replace(/\s+/g, '-').toLowerCase();
+	}
+
+	const getTriggerIndexInScheme = (trigger: Button): number => {
+		return selectedScheme.value.mappings.findIndex((val) => {
+			return val.trigger == trigger;
+		});
+	}
+
 	const hidemdiag = () => {
 		if(data.value.length === 0) {
 			selectedScheme.value = { name: 'NO SCHEME', mappings: [] };
@@ -27,7 +42,7 @@
 
 	const newSchemeName: Ref<string> = ref("");
 
-	onBeforeMount(() => {
+	onMounted(() => {
 		if(data.value == undefined || data.value == null || !(data.value as Instance).forEach) {
 			router.replace('/');
 		}
@@ -79,6 +94,7 @@
 	const saveToJson = () => {
 		let b: Blob = new Blob([JSON.stringify(data.value)]);
 		fileSaver.saveAs(b, "project.json");
+		showExportDialog.value = false;
 	}
 
 	const getOkTriggers = () => {
@@ -99,7 +115,6 @@
 		return "<Input>";
 	});
 	const newMapLabel: Ref<string> = ref('');
-	const makeMappingOK: ComputedRef<boolean> = computed(() => newMapLabel.value === undefined || newMapLabel.value === "" || newMapTriggerDisplay.value === "<Input>");
 
 	const addMapping = () => {
 		const m: Mapping = {
@@ -118,17 +133,70 @@
 		newMapLabel.value = "";
 	}
 
-	const exit = () => {
-		if(confirm("Are you sure you want to exit?\nWarning: If you have not saved this diagram, it will be lost by exiting the editor!")) {
-			store.commit('manipulate', [] as Instance);
-       		router.push('/');
-		}
+	const exit = async() => {
+		store.commit('manipulate', [] as Instance);
+		await router.replace('/');
+		window.location.reload();
+	}
+
+	const onLeaveActionInput = (trigger: Button) => {
+		selectedTrigger.value = 'NONE';
+		const e = document.querySelector("input.input_" + kebabTrigger(trigger))!;
+		selectedScheme.value.mappings[getTriggerIndexInScheme(trigger)].action = e.value;
 	}
 
 	const newMapOK = computed(() => getOkTriggers().length > 0);
+	const exportNotOK = computed(() => data.value.length < 1);
 </script>
 
 <template>
+	<!-- Exit dialog -->
+	<FwbModal v-if="showExitDialog" @close="() => showExitDialog = false">
+		<template #header>
+			<h1 class="text-white text-3xl font-bold">Exit Confirmation</h1>
+		</template>
+		<template #body>
+			<span class="text-white">
+				Are you sure you want to exit the editor?
+				<br/>
+				Any unsaved changes will be lost.
+			</span>
+		</template>
+		<template #footer>
+			<div class="h-full grid grid-cols-3 gap-2">
+				<div class="grid justify-items-start">
+					<FwbButton color="red" @click="exit">Exit</FwbButton>
+				</div>
+				<div class="grid justify-items-end col-start-3">
+					<FwbButton color="blue" @click="() => {showExitDialog = false; showExportDialog = true;}">Save</FwbButton>
+				</div>
+			</div>
+		</template>
+	</FwbModal>
+
+	<!-- Save dialog -->
+	<FwbModal v-if="showExportDialog" @close="() => showExportDialog = false" size="sm">
+		<template #header>
+			<h1 class="text-white text-3xl font-bold">Save Diagram</h1>
+		</template>
+		<template #body>
+			<p class="text-white text-center">
+				Choose how you want to save the diagram
+			</p>
+		</template>
+		<template #footer>
+			<div class="h-full grid grid-cols-2 gap-2">
+				<div class="grid justify-items-start">
+					<FwbButton color="blue" @click="saveToJson">Save Project File</FwbButton>
+				</div>
+				<div class="grid justify-items-end">
+					<FwbButton color="blue" v-bind:disabled="exportNotOK" @click="() => {exportProject(data); showExportDialog = false;}">Export as PNG</FwbButton>
+				</div>
+			</div>
+		</template>
+	</FwbModal>
+
+	<!-- Scheme manager dialog -->
 	<FwbModal v-if="showManageDialog" @close="hidemdiag">
 		<template #header>
 			<h1 class="text-white text-3xl font-bold">Manage Schemes</h1>
@@ -148,67 +216,81 @@
 		<template #footer>
 			<div class="grid grid-cols-4 gap-4">
 				<FwbInput v-model="newSchemeName" class="col-span-3" placeholder="Enter new scheme name here"></FwbInput>
-				<FwbButton color="yellow" v-bind:disabled="makeSchemeOK" @click="addScheme">Add Scheme</FwbButton>
+				<FwbButton color="blue" v-bind:disabled="makeSchemeOK" @click="addScheme">Add Scheme</FwbButton>
 			</div>
 		</template>
 	</FwbModal>
 
-	<div class="grid grid-cols-3 min-h-screen w-screen gap-8">
-		<div class="bg-slate-900 rounded-xl backdrop-opacity-100 h-full my-auto grid grid-cols-1 grid-rows-5">
-			<div class="row-span-4">
-				<h1 class="font-extrabold text-3xl text-white text-center">{{  selectedScheme.name }}</h1>
-				<FwbListGroup class="min-w-full min-h-full overflow-y-scroll" v-if="!isNullScheme">
-					<FwbListGroupItem v-for="mapping in selectedScheme.mappings" class="grid grid-cols-3 gap-3">
-						<div><span>{{ mapping.trigger }} -> {{ mapping.action }}</span></div>
-						<div class="col-span-2 flex items-center justify-end">
-							<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
-							</svg>
+	<!-- Main content -->
+	<div class="flex flex-col min-h-screen min-w-full overflow-hidden">
+		<FwbNavbar class="sticky max-w-full z-40 top-0 p-0 m-0 bg-slate-900">
+			<template #logo>
+				<div class="grid grid-cols-1 grid-rows-2">
+					<span class="text-white">Selected: {{selectedScheme.name}}</span>
+					<FwbDropdown placement="bottom" text="Schemes">
+						<FwbListGroup>
+							<FwbListGroupItem v-for="scheme in data" @click="() => {
+									data.forEach(s => {
+										if(s.name === scheme.name) selectedScheme = s;
+									});
+								}">
+								<span>{{ scheme.name }}</span>
+							</FwbListGroupItem>
+							<FwbListGroupItem>
+								<span @click="() => showManageDialog = true">Manage Schemes</span>
+							</FwbListGroupItem>
+						</FwbListGroup>
+					</FwbDropdown>
+				</div>
+			</template>
+			<template #default>
+				<span class="text-white font-extrabold text-3xl">Controller Wizard Editor</span>
+			</template>
+			<template #right-side>
+				<FwbButton color="blue" @click="() => showExportDialog = true">Save Diagram</FwbButton>
+				<FwbButton color="red" @click="() => showExitDialog = true">Exit Editor</FwbButton>
+			</template>
+		</FwbNavbar>
+		<div class="grid h-[calc(100vh-72px)]" v-if="selectedScheme.name != 'NO SCHEME'">
+			<main class="w-full flex flex-row overscroll-contain container box-border">
+				<div class="overflow-hidden flex flex-col items-center w-1/2 place-items-center container aspect-auto">
+					<img v-bind:src="controller" alt="Controller" class="fixed"/>
+				</div>
+				<!-- Main UI section -->
+				<div class="overflow-y-scroll h-[calc(100vh-72px)] w-1/2 items-center">
+					<div v-for="mapping in selectedScheme.mappings">
+						<div class="bg-slate-800 rounded-lg w-full">
+							<div class="text-white grid grid-cols-2">
+								<span>{{ mapping.trigger }}</span>
+								<div class="justify-items-end">
+									<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+										<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+									</svg>
+								</div>
+							</div>
+							<FwbInput v-bind:class="'input_' + kebabTrigger(mapping.trigger)" class="inline" v-on:focus="() => selectedTrigger = mapping.trigger" v-on:focusout="() => onLeaveActionInput(mapping.trigger)" placeholder="Enter an action..." v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action" />
 						</div>
-					</FwbListGroupItem>
-					<FwbListGroupItem class="grid grid-cols-3 gap-3" v-if="newMapOK">
-						<FwbDropdown placement="bottom" v-bind:text="newMapTriggerDisplay" close-inside color="yellow">
+						<br/>
+					</div>
+					<div class="bg-slate-800 rounded-lg w-full" v-if="newMapOK">
+						<div class="text-white grid grid-cols-2">
+							<span>Add New Action</span>
+							<div class="justify-items-end">
+								<svg @click="addMapping" class="w-6 h-6 text-lime-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+									<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5"/>
+								</svg>
+							</div>
+						</div>
+						<FwbDropdown class="w-full" v-bind:text="newMapTriggerDisplay" close-inside>
 							<FwbListGroup class="overflow-y-scroll max-h-48">
-								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t">
+								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t" v-on:mouseover="() => selectedTrigger = t" v-on:mouseleave="() => selectedTrigger = 'NONE'">
 									<span class="text-xs">{{ t }}</span>
 								</FwbListGroupItem>
 							</FwbListGroup>
 						</FwbDropdown>
-						<FwbInput v-model="newMapLabel" />
-						<FwbButton color="yellow" @click="addMapping" v-bind:disabled="makeMappingOK">+</FwbButton>
-					</FwbListGroupItem>
-				</FwbListGroup>
-			</div>
-			<div class="row-span-1 justify-center items-center grid grid-cols-2 gap-56">
-				<FwbDropdown placement="right" text="Schemes" align-to-end color="yellow">
-					<FwbListGroup>
-						<FwbListGroupItem v-for="scheme in data">
-							<span @click="() => {
-								data.forEach(s => {
-									if(s.name === scheme.name) selectedScheme = s;
-								});
-							}">{{ scheme.name }}</span>
-						</FwbListGroupItem>
-						<FwbListGroupItem>
-							<span @click="showmdiag">Manage Schemes</span>
-						</FwbListGroupItem>
-					</FwbListGroup>
-				</FwbDropdown>
-				<FwbDropdown placement="left" text="Save" align-to-end color="yellow">
-					<FwbListGroup>
-						<FwbListGroupItem>
-							<span @click="saveToJson">Save as Project File</span>
-						</FwbListGroupItem>
-						<FwbListGroupItem>
-							<span @click="() => exportProject(data)">Export</span>
-						</FwbListGroupItem>
-					</FwbListGroup>
-				</FwbDropdown>
-			</div>
+					</div>
+				</div>
+			</main>
 		</div>
-		<div class="col-span-2 rounded-xl h-5/6 my-auto flex flex-col items-center justify-center">
-			<img src="/controller.png" alt="Controller" class="aspect-auto w-2/3"/>
-		</div>
-		<FwbButton color="red" class="absolute right-0" @click="exit">X</FwbButton>
 	</div>
 </template>

@@ -6,8 +6,8 @@
     import type { Instance } from "@/schema";
     import { type Ref, type ComputedRef, ref, computed } from "vue";
 
-    let useNewEditor: Ref<boolean> = ref(false);
-    let editorRoute: ComputedRef<string> = computed(() => useNewEditor.value ? "/editornew" : "/editor");
+    let useLegacyEditor: Ref<boolean> = ref(false);
+    let editorRoute: ComputedRef<string> = computed(() => useLegacyEditor.value ? "/legacy" : "/editor");
 
     const { files, open, onChange } = useFileDialog({
         accept: 'text/json',
@@ -34,5 +34,5 @@
         <FwbButton color="yellow" class="mt-4" @click="newDiagram">New Diagram</FwbButton>
         <FwbButton color="yellow" class="mt-4" @click="open">Open From File</FwbButton>
     </div>
-    <FwbCheckbox v-model="useNewEditor" label="Use new editor" class="absolute left-0 bottom-0"/>
+    <FwbCheckbox v-model="useLegacyEditor" label="Use legacy editor (deprecated)" class="absolute left-0 bottom-0"/>
 </template>

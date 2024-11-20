@@ -9,14 +9,14 @@ const router = createRouter({
 			component: () => import('../views/HomeView.vue')
 		},
 		{
+			path: '/legacy',
+			name: 'legacyeditor',
+			component: () => import('../views/LegacyEditorView.vue')
+		},
+		{
 			path: '/editor',
 			name: 'editor',
 			component: () => import('../views/EditorView.vue')
-		},
-		{
-			path: '/editornew',
-			name: 'editornew',
-			component: () => import('../views/NewEditorView.vue')
 		}
 	]
 });
