@@ -141,7 +141,7 @@
 
 	const onLeaveActionInput = (trigger: Button) => {
 		selectedTrigger.value = 'NONE';
-		const e = document.querySelector("input.input_" + kebabTrigger(trigger))!;
+		const e = document.querySelector("input.input_" + kebabTrigger(trigger))! as HTMLInputElement;
 		selectedScheme.value.mappings[getTriggerIndexInScheme(trigger)].action = e.value;
 	}
 
