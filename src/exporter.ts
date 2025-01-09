@@ -1,51 +1,77 @@
-import type { Button, Instance, Mapping, Scheme } from "./schema";
-import fileSaver from "file-saver";
-import templateURL from "./diagram_template.svg";
-import { Canvg } from "canvg";
+import controllerImage from './export-controller-base.png';
+import fileSaver from 'file-saver';
+import type {Button, Instance, Mapping, Scheme} from './schema';
 
 export const exportProject = (inst: Instance) => {
-	inst.forEach(async(scheme: Scheme) => {
-		const template = await (await fetch(templateURL)).text();
-		const templateDoc = new DOMParser().parseFromString(template, "image/svg+xml");
-
-		templateDoc.querySelector("#title")!.innerHTML = scheme.name;
-		
+	inst.forEach(async (scheme: Scheme) => {
 		let mappingsAsDict: Map<Button, string> = new Map();
 		scheme.mappings.forEach((m: Mapping) => {
 			mappingsAsDict.set(m.trigger, m.action);
 		});
 
-		templateDoc.querySelector("#a")!.innerHTML = mappingsAsDict.get('A') || "No Action";
-		templateDoc.querySelector("#b")!.innerHTML = mappingsAsDict.get('B') || "No Action";
-		templateDoc.querySelector("#x")!.innerHTML = mappingsAsDict.get('X') || "No Action";
-		templateDoc.querySelector("#y")!.innerHTML = mappingsAsDict.get('Y') || "No Action";
-		templateDoc.querySelector("#left-trigger")!.innerHTML = mappingsAsDict.get('Left Trigger') || "No Action";
-		templateDoc.querySelector("#left-button")!.innerHTML = mappingsAsDict.get('Left Shoulder') || "No Action";
-		templateDoc.querySelector("#right-trigger")!.innerHTML = mappingsAsDict.get('Right Trigger') || "No Action";
-		templateDoc.querySelector("#right-button")!.innerHTML = mappingsAsDict.get('Right Shoulder') || "No Action";
-		templateDoc.querySelector("#left-trigger")!.innerHTML = mappingsAsDict.get('Left Trigger') || "No Action";
-		templateDoc.querySelector("#left-button")!.innerHTML = mappingsAsDict.get('Left Shoulder') || "No Action";
-		templateDoc.querySelector("#start")!.innerHTML = mappingsAsDict.get('Start') || "No Action";
-		templateDoc.querySelector("#back")!.innerHTML = mappingsAsDict.get('Back') || "No Action";
-		templateDoc.querySelector("#dpad-r")!.innerHTML = mappingsAsDict.get('D-Pad Right') || "No Action";
-		templateDoc.querySelector("#dpad-l")!.innerHTML = mappingsAsDict.get('D-Pad Left') || "No Action";
-		templateDoc.querySelector("#dpad-u")!.innerHTML = mappingsAsDict.get('D-Pad Up') || "No Action";
-		templateDoc.querySelector("#dpad-d")!.innerHTML = mappingsAsDict.get('D-Pad Down') || "No Action";
-		templateDoc.querySelector("#lstick")!.innerHTML = mappingsAsDict.get('Left Stick') || "No Action";
-		templateDoc.querySelector("#lstick-press")!.innerHTML = "Press: " + (mappingsAsDict.get('Left Stick Press') || "No Action");
-		templateDoc.querySelector("#rstick")!.innerHTML = mappingsAsDict.get('Right Stick') || "No Action";
-		templateDoc.querySelector("#rstick-press")!.innerHTML = "Press: " + (mappingsAsDict.get('Right Stick Press') || "No Action");
+		const canvas = new OffscreenCanvas(644, 500);
+		const ctx = canvas.getContext('2d')!;
 
-		let baseOut: string = templateDoc.documentElement.innerHTML;
-		const out = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\">" + baseOut + "</svg>";
+		const distanceFromCenter = 165;
+		const LEFT = canvas.width / 2 - distanceFromCenter;
+		const RIGHT = canvas.width / 2 + distanceFromCenter - 6;
 
-		const canvas = new OffscreenCanvas(800, 500);
-		const ctx = canvas.getContext("2d")!;
-		const renderer = Canvg.fromString(ctx, out, {ignoreMouse: true, ignoreAnimation: true});
-		await renderer.render();
-		const pngBlob = await canvas.convertToBlob();
-		
-		const filename = scheme.name + ".png";
-		fileSaver.saveAs(pngBlob, filename);
+		const buttonPositions = {
+			"Back": [LEFT, 17],
+			"Start": [RIGHT, 17],
+			"Left Shoulder": [LEFT, 55],
+			"Right Shoulder": [RIGHT, 53],
+			"Left Trigger": [LEFT, 89],
+			"Right Trigger": [RIGHT, 80],
+			"Left Stick Y": [LEFT, 128],
+			"Left Stick X": [LEFT, 156],
+			"Left Stick Press": [LEFT, 186],
+			"Y": [RIGHT, 114],
+			"B": [RIGHT, 160],
+			"X": [RIGHT, 182],
+			"A": [RIGHT, 273],
+			"D-Pad Up": [LEFT, 292],
+			"D-Pad Left": [LEFT, 320],
+			"D-Pad Down": [LEFT, 347],
+			"D-Pad Right": [LEFT, 378],
+			"Right Stick Y": [RIGHT, 320],
+			"Right Stick X": [RIGHT, 347],
+			"Right Stick Press": [RIGHT, 376],
+		};
+
+		async function drawController() {
+			let controller = new Image();
+			controller.src = controllerImage;
+			await new Promise((resolve) => controller.addEventListener('load', resolve));
+
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			ctx.fillStyle = '#FFFFFF';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.drawImage(controller, 0, 0, canvas.width - 6, 406);
+
+			ctx.textBaseline = 'middle';
+			ctx.direction = 'ltr';
+			ctx.font = '32px Arial';
+			ctx.fillStyle = '#000000';
+			ctx.fillText(scheme.name, 5, canvas.height - 18);
+
+			for(const [trigger, action] of mappingsAsDict) {
+				const position = buttonPositions[trigger];
+				if (position && action) {
+					ctx.fillStyle = '#000';
+					ctx.font = '16px Arial';
+					ctx.direction = position[0] === LEFT ? 'rtl' : 'ltr';
+					ctx.fillText(action, position[0], position[1] + 16 / 2.8);
+				}
+			}
+
+			requestAnimationFrame(drawController);
+		}
+		drawController().then(async() => {
+			const pngBlob = await canvas.convertToBlob();
+			const filename = scheme.name + '.png';
+			fileSaver.saveAs(pngBlob, filename);
+		})
 	});
 };

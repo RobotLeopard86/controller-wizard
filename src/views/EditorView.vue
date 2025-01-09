@@ -1,152 +1,152 @@
 <script setup lang="ts">
-	import { useStore } from "vuex";
-	import { computed, onBeforeMount, onMounted, ref, type ComputedRef, type Ref } from "vue";
-	import { FwbDropdown, FwbListGroup, FwbListGroupItem, FwbButton, FwbModal, FwbInput, FwbNavbar } from "flowbite-vue";
-	import type { Button, Instance, Mapping, Scheme } from "@/schema";
-	import router from "@/router";
-	import fileSaver from "file-saver";
-	import { exportProject } from "@/exporter";
+import { useStore } from "vuex";
+import { computed, onBeforeMount, onMounted, ref, type ComputedRef, type Ref } from "vue";
+import { FwbDropdown, FwbListGroup, FwbListGroupItem, FwbButton, FwbModal, FwbInput, FwbNavbar } from "flowbite-vue";
+import type { Button, Instance, Mapping, Scheme } from "@/schema";
+import router from "@/router";
+import fileSaver from "file-saver";
+import { exportProject } from "@/exporter";
 
-	const store = useStore();
+const store = useStore();
 
-	const data: ComputedRef<Instance> = computed(() => store.state.value);
+const data: ComputedRef<Instance> = computed(() => store.state.value);
 
-	const showManageDialog: Ref<boolean> = ref(false);
-	const showExitDialog: Ref<boolean> = ref(false);
-	const showExportDialog: Ref<boolean> = ref(false);
+const showManageDialog: Ref<boolean> = ref(false);
+const showExitDialog: Ref<boolean> = ref(false);
+const showExportDialog: Ref<boolean> = ref(false);
 
-	const selectedTrigger: Ref<string> = ref("NONE");
-	const controller: ComputedRef<string> = computed(() => import.meta.env.BASE_URL + "controllers/" + selectedTrigger.value.replace(/\s+/g, '-').toLowerCase() + ".png");
-	
-	const selectedScheme: Ref<Scheme> = ref({ name: 'NO SCHEME', mappings: [] });
-	const isNullScheme: ComputedRef<boolean> = computed(() => selectedScheme.value.name === 'NO SCHEME');
+const selectedTrigger: Ref<string> = ref("NONE");
+const controller: ComputedRef<string> = computed(() => import.meta.env.BASE_URL + "controllers/" + selectedTrigger.value.replace(/\s+/g, '-').toLowerCase() + ".png");
 
-	const kebabTrigger = (trigger: Button): string => {
-		return trigger.replace(/\s+/g, '-').toLowerCase();
-	}
+const selectedScheme: Ref<Scheme> = ref({ name: 'NO SCHEME', mappings: [] });
+const isNullScheme: ComputedRef<boolean> = computed(() => selectedScheme.value.name === 'NO SCHEME');
 
-	const getTriggerIndexInScheme = (trigger: Button): number => {
-		return selectedScheme.value.mappings.findIndex((val) => {
-			return val.trigger == trigger;
-		});
-	}
+const kebabTrigger = (trigger: Button): string => {
+	return trigger.replace(/\s+/g, '-').toLowerCase();
+}
 
-	const hidemdiag = () => {
-		if(data.value.length === 0) {
-			selectedScheme.value = { name: 'NO SCHEME', mappings: [] };
-		} else if(isNullScheme.value) {
-			selectedScheme.value = data.value[0];
-		}
-		showManageDialog.value = false;
-	}
-
-	const newSchemeName: Ref<string> = ref("");
-
-	onMounted(() => {
-		if(data.value == undefined || data.value == null || !(data.value as Instance).forEach) {
-			router.replace('/');
-		}
-		if(data.value.length > 0) {
-			selectedScheme.value = data.value[0];
-		}
-	})
-
-	const canMakeNewScheme = () => {
-		let foundExisting: boolean = false;
-		const inst = data.value as Instance;
-		inst.forEach(element => {
-			foundExisting = newSchemeName.value === element.name;
-		});
-		return !foundExisting && newSchemeName.value !== "" && newSchemeName.value !== undefined
-	};
-	const makeSchemeOK: ComputedRef<boolean> = computed(() => !canMakeNewScheme());
-	
-	const addScheme = () => {
-		let s: Scheme = {
-			name: newSchemeName.value,
-			mappings: []
-		};
-		let mod = data.value;
-		mod.push(s);
-		store.commit('manipulate', mod);
-		newSchemeName.value = "";
-	}
-
-	const rmScheme = (scheme: string) => {
-		let mod = data.value.filter((val) => {
-			return val.name !== scheme;
-		});
-		store.commit('manipulate', mod);
-	}
-
-	const rmMapping = (trigger: Button) => {
-		let mod = selectedScheme.value.mappings.filter((val) => {
-			return val.trigger !== trigger;
-		});
-		selectedScheme.value.mappings = mod;
-		data.value.forEach((val, i) => {
-			if(val.name === selectedScheme.value.name) {
-				data.value[i] = selectedScheme.value;
-			}
-		});
-	}
-
-	const saveToJson = () => {
-		let b: Blob = new Blob([JSON.stringify(data.value)]);
-		fileSaver.saveAs(b, "project.json");
-		showExportDialog.value = false;
-	}
-
-	const getOkTriggers = () => {
-		const vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Shoulder', 'Right Trigger', 
-	  	'Right Shoulder', 'Back', 'Start', 'Left Stick', 'Right Stick', 'Left Stick Press', 'Right Stick Press',
- 		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'];
-		return vals.filter((val) => {
-			return selectedScheme.value.mappings.filter((val2) => {
-				return val2.trigger === val;
-			}).length === 0;
-		});
-	}
-
-	const newMapTrigger: Ref<Button> = ref('A');
-	const newMapTriggerDisplay: ComputedRef<string> = computed(() => {
-		if(isNullScheme.value) return "<Input>";
-		if(getOkTriggers().includes(newMapTrigger.value)) return newMapTrigger.value;
-		return "<Input>";
+const getTriggerIndexInScheme = (trigger: Button): number => {
+	return selectedScheme.value.mappings.findIndex((val) => {
+		return val.trigger == trigger;
 	});
-	const newMapLabel: Ref<string> = ref('');
+}
 
-	const addMapping = () => {
-		const m: Mapping = {
-			action: newMapLabel.value,
-			trigger: newMapTrigger.value
-		};
-		let mod = selectedScheme.value.mappings;
-		mod.push(m);
-		selectedScheme.value.mappings = mod;
-		data.value.forEach((val, i) => {
-			if(val.name === selectedScheme.value.name) {
-				data.value[i] = selectedScheme.value;
-			}
-		});
-		newMapTrigger.value = getOkTriggers()[0];
-		newMapLabel.value = "";
+const hidemdiag = () => {
+	if (data.value.length === 0) {
+		selectedScheme.value = { name: 'NO SCHEME', mappings: [] };
+	} else if (isNullScheme.value) {
+		selectedScheme.value = data.value[0];
 	}
+	showManageDialog.value = false;
+}
 
-	const exit = async() => {
-		store.commit('manipulate', [] as Instance);
-		await router.replace('/');
-		window.location.reload();
+const newSchemeName: Ref<string> = ref("");
+
+onMounted(() => {
+	if (data.value == undefined || data.value == null || !(data.value as Instance).forEach) {
+		router.replace('/');
 	}
-
-	const onLeaveActionInput = (trigger: Button) => {
-		selectedTrigger.value = 'NONE';
-		const e = document.querySelector("input.input_" + kebabTrigger(trigger))! as HTMLInputElement;
-		selectedScheme.value.mappings[getTriggerIndexInScheme(trigger)].action = e.value;
+	if (data.value.length > 0) {
+		selectedScheme.value = data.value[0];
 	}
+})
 
-	const newMapOK = computed(() => getOkTriggers().length > 0);
-	const exportNotOK = computed(() => data.value.length < 1);
+const canMakeNewScheme = () => {
+	let foundExisting: boolean = false;
+	const inst = data.value as Instance;
+	inst.forEach(element => {
+		foundExisting = newSchemeName.value === element.name;
+	});
+	return !foundExisting && newSchemeName.value !== "" && newSchemeName.value !== undefined
+};
+const makeSchemeOK: ComputedRef<boolean> = computed(() => !canMakeNewScheme());
+
+const addScheme = () => {
+	let s: Scheme = {
+		name: newSchemeName.value,
+		mappings: []
+	};
+	let mod = data.value;
+	mod.push(s);
+	store.commit('manipulate', mod);
+	newSchemeName.value = "";
+}
+
+const rmScheme = (scheme: string) => {
+	let mod = data.value.filter((val) => {
+		return val.name !== scheme;
+	});
+	store.commit('manipulate', mod);
+}
+
+const rmMapping = (trigger: Button) => {
+	let mod = selectedScheme.value.mappings.filter((val) => {
+		return val.trigger !== trigger;
+	});
+	selectedScheme.value.mappings = mod;
+	data.value.forEach((val, i) => {
+		if (val.name === selectedScheme.value.name) {
+			data.value[i] = selectedScheme.value;
+		}
+	});
+}
+
+const saveToJson = () => {
+	let b: Blob = new Blob([JSON.stringify(data.value)]);
+	fileSaver.saveAs(b, "project.json");
+	showExportDialog.value = false;
+}
+
+const getOkTriggers = () => {
+	const vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Shoulder', 'Right Trigger',
+		'Right Shoulder', 'Back', 'Start', 'Left Stick X', 'Left Stick Y', 'Right Stick X', 'Right Stick Y', 'Left Stick Press', 'Right Stick Press',
+		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'];
+	return vals.filter((val) => {
+		return selectedScheme.value.mappings.filter((val2) => {
+			return val2.trigger === val;
+		}).length === 0;
+	});
+}
+
+const newMapTrigger: Ref<Button> = ref('A');
+const newMapTriggerDisplay: ComputedRef<string> = computed(() => {
+	if (isNullScheme.value) return "<Input>";
+	if (getOkTriggers().includes(newMapTrigger.value)) return newMapTrigger.value;
+	return "<Input>";
+});
+const newMapLabel: Ref<string> = ref('');
+
+const addMapping = () => {
+	const m: Mapping = {
+		action: newMapLabel.value,
+		trigger: newMapTrigger.value
+	};
+	let mod = selectedScheme.value.mappings;
+	mod.push(m);
+	selectedScheme.value.mappings = mod;
+	data.value.forEach((val, i) => {
+		if (val.name === selectedScheme.value.name) {
+			data.value[i] = selectedScheme.value;
+		}
+	});
+	newMapTrigger.value = getOkTriggers()[0];
+	newMapLabel.value = "";
+}
+
+const exit = async () => {
+	store.commit('manipulate', [] as Instance);
+	await router.replace('/');
+	window.location.reload();
+}
+
+const onLeaveActionInput = (trigger: Button) => {
+	selectedTrigger.value = 'NONE';
+	const e = document.querySelector("input.input_" + kebabTrigger(trigger))! as HTMLInputElement;
+	selectedScheme.value.mappings[getTriggerIndexInScheme(trigger)].action = e.value;
+}
+
+const newMapOK = computed(() => getOkTriggers().length > 0);
+const exportNotOK = computed(() => data.value.length < 1);
 </script>
 
 <template>
@@ -158,7 +158,7 @@
 		<template #body>
 			<span class="text-white">
 				Are you sure you want to exit the editor?
-				<br/>
+				<br />
 				Any unsaved changes will be lost.
 			</span>
 		</template>
@@ -168,7 +168,8 @@
 					<FwbButton color="red" @click="exit">Exit</FwbButton>
 				</div>
 				<div class="grid justify-items-end col-start-3">
-					<FwbButton color="blue" @click="() => {showExitDialog = false; showExportDialog = true;}">Save</FwbButton>
+					<FwbButton color="blue" @click="() => { showExitDialog = false; showExportDialog = true; }">Save
+					</FwbButton>
 				</div>
 			</div>
 		</template>
@@ -190,7 +191,8 @@
 					<FwbButton color="blue" @click="saveToJson">Save Project File</FwbButton>
 				</div>
 				<div class="grid justify-items-end">
-					<FwbButton color="blue" v-bind:disabled="exportNotOK" @click="() => {exportProject(data); showExportDialog = false;}">Export as PNG</FwbButton>
+					<FwbButton color="blue" v-bind:disabled="exportNotOK"
+						@click="() => { exportProject(data); showExportDialog = false; }">Export as PNG</FwbButton>
 				</div>
 			</div>
 		</template>
@@ -206,8 +208,10 @@
 				<FwbListGroupItem v-for="scheme in data" class="grid grid-cols-3 gap-3">
 					<div><span>{{ scheme.name }}</span></div>
 					<div class="col-span-2 flex items-center justify-end">
-						<svg @click="() => rmScheme(scheme.name)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-							<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+						<svg @click="() => rmScheme(scheme.name)" class="w-6 h-6 text-red-500" aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+							<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
 						</svg>
 					</div>
 				</FwbListGroupItem>
@@ -215,7 +219,8 @@
 		</template>
 		<template #footer>
 			<div class="grid grid-cols-4 gap-4">
-				<FwbInput v-model="newSchemeName" class="col-span-3" placeholder="Enter new scheme name here"></FwbInput>
+				<FwbInput v-model="newSchemeName" class="col-span-3" placeholder="Enter new scheme name here">
+				</FwbInput>
 				<FwbButton color="blue" v-bind:disabled="makeSchemeOK" @click="addScheme">Add Scheme</FwbButton>
 			</div>
 		</template>
@@ -226,14 +231,14 @@
 		<FwbNavbar class="sticky max-w-full z-40 top-0 p-0 m-0 bg-slate-900">
 			<template #logo>
 				<div class="grid grid-cols-1 grid-rows-2">
-					<span class="text-white">Selected: {{selectedScheme.name}}</span>
+					<span class="text-white">Selected: {{ selectedScheme.name }}</span>
 					<FwbDropdown placement="bottom" text="Schemes">
 						<FwbListGroup>
 							<FwbListGroupItem v-for="scheme in data" @click="() => {
-									data.forEach(s => {
-										if(s.name === scheme.name) selectedScheme = s;
-									});
-								}">
+								data.forEach(s => {
+									if (s.name === scheme.name) selectedScheme = s;
+								});
+							}">
 								<span>{{ scheme.name }}</span>
 							</FwbListGroupItem>
 							<FwbListGroupItem>
@@ -254,7 +259,7 @@
 		<div class="grid h-[calc(100vh-72px)]" v-if="selectedScheme.name != 'NO SCHEME'">
 			<main class="w-full flex flex-row overscroll-contain container box-border">
 				<div class="overflow-hidden flex flex-col items-center w-1/2 place-items-center container aspect-auto">
-					<img v-bind:src="controller" alt="Controller" class="fixed"/>
+					<img v-bind:src="controller" alt="Controller" class="fixed" />
 				</div>
 				<!-- Main UI section -->
 				<div class="overflow-y-scroll h-[calc(100vh-72px)] w-1/2 items-center">
@@ -263,27 +268,40 @@
 							<div class="text-white grid grid-cols-2">
 								<span>{{ mapping.trigger }}</span>
 								<div class="justify-items-end">
-									<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-										<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+									<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500"
+										aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+										fill="none" viewBox="0 0 24 24">
+										<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+											stroke-width="2"
+											d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
 									</svg>
 								</div>
 							</div>
-							<FwbInput v-bind:class="'input_' + kebabTrigger(mapping.trigger)" class="inline" v-on:focus="() => selectedTrigger = mapping.trigger" v-on:focusout="() => onLeaveActionInput(mapping.trigger)" placeholder="Enter an action..." v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action" />
+							<FwbInput v-bind:class="'input_' + kebabTrigger(mapping.trigger)" class="inline"
+								v-on:focus="() => selectedTrigger = mapping.trigger"
+								v-on:focusout="() => onLeaveActionInput(mapping.trigger)"
+								placeholder="Enter an action..."
+								v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action" />
 						</div>
-						<br/>
+						<br />
 					</div>
 					<div class="bg-slate-800 rounded-lg w-full" v-if="newMapOK">
 						<div class="text-white grid grid-cols-2">
 							<span>Add New Action</span>
 							<div class="justify-items-end">
-								<svg @click="addMapping" class="w-6 h-6 text-lime-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-									<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5"/>
+								<svg @click="addMapping" class="w-6 h-6 text-lime-600" aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+									viewBox="0 0 24 24">
+									<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+										stroke-width="2" d="M5 12h14m-7 7V5" />
 								</svg>
 							</div>
 						</div>
 						<FwbDropdown class="w-full" v-bind:text="newMapTriggerDisplay" close-inside>
 							<FwbListGroup class="overflow-y-scroll max-h-48">
-								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t" v-on:mouseover="() => selectedTrigger = t" v-on:mouseleave="() => selectedTrigger = 'NONE'">
+								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t"
+									v-on:mouseover="() => selectedTrigger = t"
+									v-on:mouseleave="() => selectedTrigger = 'NONE'">
 									<span class="text-xs">{{ t }}</span>
 								</FwbListGroupItem>
 							</FwbListGroup>
