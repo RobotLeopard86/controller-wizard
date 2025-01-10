@@ -6,6 +6,7 @@ import type { Button, Instance, Mapping, Scheme } from "@/schema";
 import router from "@/router";
 import fileSaver from "file-saver";
 import { exportProject } from "@/exporter";
+import { validateLocaleAndSetLanguage } from "typescript";
 
 const store = useStore();
 
@@ -25,9 +26,9 @@ const kebabTrigger = (trigger: Button): string => {
 	return trigger.replace(/\s+/g, '-').toLowerCase();
 }
 
-const getTriggerIndexInScheme = (trigger: Button): number => {
+const getTriggerIndexInScheme = (trigger: Button, trigger2: Button): number => {
 	return selectedScheme.value.mappings.findIndex((val) => {
-		return val.trigger == trigger;
+		return val.trigger == trigger && val.trigger2 == trigger2;
 	});
 }
 
@@ -87,10 +88,11 @@ const rmScheme = (scheme: string) => {
 	store.commit('manipulate', mod);
 }
 
-const rmMapping = (trigger: Button) => {
+const rmMapping = (trigger: Button, trigger2: Button) => {
 	let mod = selectedScheme.value.mappings.filter((val) => {
-		return val.trigger !== trigger;
+		return val.trigger !== trigger || (val.trigger === trigger && val.trigger2 != trigger2);
 	});
+	console.log(mod);
 	selectedScheme.value.mappings = mod;
 	data.value.forEach((val, i) => {
 		if (val.name === selectedScheme.value.name) {
@@ -106,28 +108,42 @@ const saveToJson = () => {
 }
 
 const getOkTriggers = () => {
-	const vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Button', 'Right Trigger',
+	const vals = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Button', 'Right Trigger',
 		'Right Button', 'Back', 'Start', 'Left Stick X', 'Left Stick Y', 'Right Stick X', 'Right Stick Y', 'Left Stick Press', 'Right Stick Press',
-		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'];
+		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'] as Button[];
+	return vals;
+}
+
+const getOkComboTriggers = (base: Button) => {
+	let vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Button', 'Right Trigger',
+		'Right Button', 'Back', 'Start', 'Left Stick X', 'Left Stick Y', 'Right Stick X', 'Right Stick Y', 'Left Stick Press', 'Right Stick Press',
+		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'].filter((val) => val != base) as Button[];
 	return vals.filter((val) => {
 		return selectedScheme.value.mappings.filter((val2) => {
-			return val2.trigger === val;
+			return val2.trigger == base && val2.trigger2 === val;
 		}).length === 0;
 	});
 }
 
 const newMapTrigger: Ref<Button> = ref('A');
 const newMapTriggerDisplay: ComputedRef<string> = computed(() => {
-	if (isNullScheme.value) return "<Input>";
+	if (isNullScheme.value) return "<None>";
 	if (getOkTriggers().includes(newMapTrigger.value)) return newMapTrigger.value;
-	return "<Input>";
+	return "<None>";
+});
+const newMapTrigger2: Ref<Button> = ref('A');
+const newMapTrigger2Display: ComputedRef<string> = computed(() => {
+	if (isNullScheme.value) return "Nothing";
+	if (getOkComboTriggers(newMapTrigger.value).includes(newMapTrigger2.value)) return newMapTrigger2.value;
+	return "Nothing";
 });
 const newMapLabel: Ref<string> = ref('');
 
 const addMapping = () => {
 	const m: Mapping = {
 		action: newMapLabel.value,
-		trigger: newMapTrigger.value
+		trigger: newMapTrigger.value,
+		trigger2: newMapTrigger2.value
 	};
 	let mod = selectedScheme.value.mappings;
 	mod.push(m);
@@ -138,6 +154,7 @@ const addMapping = () => {
 		}
 	});
 	newMapTrigger.value = getOkTriggers()[0];
+	newMapTrigger2.value = newMapTrigger.value;
 	newMapLabel.value = "";
 }
 
@@ -147,13 +164,16 @@ const exit = async () => {
 	window.location.reload();
 }
 
-const onLeaveActionInput = (trigger: Button) => {
+const onLeaveActionInput = (trigger: Button, trigger2: Button) => {
 	selectedTrigger.value = 'NONE';
-	const e = document.querySelector("input.input_" + kebabTrigger(trigger))! as HTMLInputElement;
-	selectedScheme.value.mappings[getTriggerIndexInScheme(trigger)].action = e.value;
+	console.log('Scanning for ' + "input_" + kebabTrigger(trigger) + "_" + kebabTrigger(trigger2));
+	const e = document.querySelector("input.input_" + kebabTrigger(trigger) + "_" + kebabTrigger(trigger2))! as HTMLInputElement;
+	console.log(e);
+	selectedScheme.value.mappings[getTriggerIndexInScheme(trigger, trigger2)].action = e.value;
+	console.log("Set to " + e.value);
 }
 
-const newMapOK = computed(() => getOkTriggers().length > 0);
+const newMapOK = computed(() => getOkTriggers().length > 0 && getOkComboTriggers(newMapTrigger.value).length > 0);
 const exportNotOK = computed(() => data.value.length < 1);
 </script>
 
@@ -274,23 +294,26 @@ const exportNotOK = computed(() => data.value.length < 1);
 					<div v-for="mapping in selectedScheme.mappings">
 						<div class="bg-slate-800 rounded-lg w-full">
 							<div class="text-white grid grid-cols-2">
-								<span>{{ mapping.trigger }}</span>
+								<span>{{ mapping.trigger2 == mapping.trigger ? mapping.trigger : mapping.trigger + " + "
+									+
+									mapping.trigger2 }}</span>
 								<div class="justify-items-end">
-									<svg @click="() => rmMapping(mapping.trigger)" class="w-6 h-6 text-red-500"
-										aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-										fill="none" viewBox="0 0 24 24">
+									<svg @click="() => rmMapping(mapping.trigger, mapping.trigger2)"
+										class="w-6 h-6 text-red-500" aria-hidden="true"
+										xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+										viewBox="0 0 24 24">
 										<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
 											stroke-width="2"
 											d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
 									</svg>
 								</div>
 							</div>
-							<FwbInput v-bind:class="'input_' + kebabTrigger(mapping.trigger)" class="inline"
-								v-on:focus="() => selectedTrigger = mapping.trigger"
-								v-on:focusout="() => onLeaveActionInput(mapping.trigger)"
+							<FwbInput
+								v-bind:class="'input_' + kebabTrigger(mapping.trigger) + '_' + kebabTrigger(mapping.trigger2)"
+								class="inline" v-on:focus="() => selectedTrigger = mapping.trigger"
+								v-on:focusout="() => onLeaveActionInput(mapping.trigger, mapping.trigger2)"
 								placeholder="Enter an action..."
-								v-bind:key="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action"
-								v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action" />
+								v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger, mapping.trigger2)].action" />
 						</div>
 						<br />
 					</div>
@@ -306,10 +329,29 @@ const exportNotOK = computed(() => data.value.length < 1);
 								</svg>
 							</div>
 						</div>
-						<FwbDropdown class="w-full" v-bind:text="newMapTriggerDisplay" close-inside>
+						<FwbDropdown class="inline" v-bind:text="newMapTriggerDisplay" close-inside>
 							<FwbListGroup class="overflow-y-scroll max-h-48">
-								<FwbListGroupItem v-for="t in getOkTriggers()" @click="() => newMapTrigger = t"
+								<FwbListGroupItem v-for="t in getOkTriggers()"
+									@click="() => { newMapTrigger = t; newMapTrigger2 = t }"
 									v-on:mouseover="() => selectedTrigger = t"
+									v-on:mouseleave="() => selectedTrigger = 'NONE'">
+									<span class="text-xs">{{ t }}</span>
+								</FwbListGroupItem>
+							</FwbListGroup>
+						</FwbDropdown>
+						<span
+							class="text-white font-bold">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+						<FwbDropdown class="inline" v-bind:text="newMapTrigger2Display" close-inside>
+							<FwbListGroup class="overflow-y-scroll max-h-48">
+								<FwbListGroupItem
+									v-if="selectedScheme.mappings.filter((val) => val.trigger == newMapTrigger && val.trigger2 == val.trigger).length < 0"
+									@click="() => newMapTrigger2 = newMapTrigger"
+									v-on:mouseover="() => selectedTrigger = 'NONE'"
+									v-on:mouseleave="() => selectedTrigger = 'NONE'">
+									<span class="text-xs">Nothing</span>
+								</FwbListGroupItem>
+								<FwbListGroupItem v-for="t in getOkComboTriggers(newMapTrigger)"
+									@click="() => newMapTrigger2 = t" v-on:mouseover="() => selectedTrigger = t"
 									v-on:mouseleave="() => selectedTrigger = 'NONE'">
 									<span class="text-xs">{{ t }}</span>
 								</FwbListGroupItem>

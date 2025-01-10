@@ -4,7 +4,8 @@ export type Button = 'A' | 'B' | 'X' | 'Y' | 'Left Trigger' | 'Left Button' | 'R
 
 export interface Mapping {
 	action: string,
-	trigger: Button
+	trigger: Button,
+	trigger2: Button
 }
 
 export interface Scheme {

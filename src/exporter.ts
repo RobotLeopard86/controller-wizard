@@ -9,7 +9,7 @@ export const exportProject = (inst: Instance) => {
 			mappingsAsDict.set(m.trigger, m.action);
 		});
 
-		const canvas = new OffscreenCanvas(644, 500);
+		const canvas = new OffscreenCanvas(1920, 1080);
 		const ctx = canvas.getContext('2d')!;
 
 		const distanceFromCenter = 165;
