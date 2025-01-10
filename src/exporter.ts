@@ -19,8 +19,8 @@ export const exportProject = (inst: Instance) => {
 		const buttonPositions = {
 			"Back": [LEFT, 17],
 			"Start": [RIGHT, 17],
-			"Left Shoulder": [LEFT, 55],
-			"Right Shoulder": [RIGHT, 53],
+			"Left Button": [LEFT, 55],
+			"Right Button": [RIGHT, 53],
 			"Left Trigger": [LEFT, 89],
 			"Right Trigger": [RIGHT, 80],
 			"Left Stick Y": [LEFT, 128],

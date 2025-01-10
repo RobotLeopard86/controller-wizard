@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useStore } from "vuex";
-import { computed, onBeforeMount, onMounted, ref, type ComputedRef, type Ref } from "vue";
+import { computed, onMounted, ref, type ComputedRef, type Ref } from "vue";
 import { FwbDropdown, FwbListGroup, FwbListGroupItem, FwbButton, FwbModal, FwbInput, FwbNavbar } from "flowbite-vue";
 import type { Button, Instance, Mapping, Scheme } from "@/schema";
 import router from "@/router";
@@ -48,6 +48,14 @@ onMounted(() => {
 	}
 	if (data.value.length > 0) {
 		selectedScheme.value = data.value[0];
+		setTimeout(() => {
+			selectedTrigger.value = 'Kangaroo';
+			setTimeout(() => {
+				selectedTrigger.value = 'NONE';
+			}, 5);
+		}, 5);
+	} else {
+		showManageDialog.value = true;
 	}
 })
 
@@ -98,8 +106,8 @@ const saveToJson = () => {
 }
 
 const getOkTriggers = () => {
-	const vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Shoulder', 'Right Trigger',
-		'Right Shoulder', 'Back', 'Start', 'Left Stick X', 'Left Stick Y', 'Right Stick X', 'Right Stick Y', 'Left Stick Press', 'Right Stick Press',
+	const vals: Button[] = ['A', 'B', 'X', 'Y', 'Left Trigger', 'Left Button', 'Right Trigger',
+		'Right Button', 'Back', 'Start', 'Left Stick X', 'Left Stick Y', 'Right Stick X', 'Right Stick Y', 'Left Stick Press', 'Right Stick Press',
 		'D-Pad Left', 'D-Pad Right', 'D-Pad Up', 'D-Pad Down'];
 	return vals.filter((val) => {
 		return selectedScheme.value.mappings.filter((val2) => {
@@ -281,6 +289,7 @@ const exportNotOK = computed(() => data.value.length < 1);
 								v-on:focus="() => selectedTrigger = mapping.trigger"
 								v-on:focusout="() => onLeaveActionInput(mapping.trigger)"
 								placeholder="Enter an action..."
+								v-bind:key="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action"
 								v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger)].action" />
 						</div>
 						<br />
