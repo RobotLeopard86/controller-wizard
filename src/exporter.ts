@@ -115,7 +115,7 @@ export const exportProject = (inst: Instance) => {
 				});
 			});
 
-			ctx.textAlign = "center";
+			ctx.textAlign = "start";
 			ctx.font = "28px monospace"
 			ctx.fillText(scheme.name, 710, 1050, 500);
 		}
