@@ -13,4 +13,8 @@ export interface Scheme {
 	mappings: Mapping[]
 }
 
-export type Instance = Scheme[];
+export interface Instance {
+	name: string,
+	real: boolean,
+	schemes: Scheme[]
+}

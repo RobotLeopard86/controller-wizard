@@ -33,10 +33,10 @@ const getTriggerIndexInScheme = (trigger: Button, trigger2: Button): number => {
 }
 
 const hidemdiag = () => {
-	if (data.value.length === 0) {
+	if (data.value.schemes.length === 0) {
 		selectedScheme.value = { name: 'NO SCHEME', mappings: [] };
 	} else if (isNullScheme.value) {
-		selectedScheme.value = data.value[0];
+		selectedScheme.value = data.value.schemes[0];
 	}
 	showManageDialog.value = false;
 }
@@ -44,11 +44,11 @@ const hidemdiag = () => {
 const newSchemeName: Ref<string> = ref("");
 
 onMounted(() => {
-	if (data.value == undefined || data.value == null || !(data.value as Instance).forEach) {
-		router.replace('/');
+	if (data.value == undefined || data.value == null || !data.value.real || !(data.value as Instance).schemes.forEach) {
+		exit();
 	}
-	if (data.value.length > 0) {
-		selectedScheme.value = data.value[0];
+	if (data.value.schemes.length > 0) {
+		selectedScheme.value = data.value.schemes[0];
 		setTimeout(() => {
 			selectedTrigger.value = 'Kangaroo';
 			setTimeout(() => {
@@ -63,7 +63,7 @@ onMounted(() => {
 const canMakeNewScheme = () => {
 	let foundExisting: boolean = false;
 	const inst = data.value as Instance;
-	inst.forEach(element => {
+	inst.schemes.forEach(element => {
 		foundExisting = newSchemeName.value === element.name;
 	});
 	return !foundExisting && newSchemeName.value !== "" && newSchemeName.value !== undefined
@@ -76,13 +76,13 @@ const addScheme = () => {
 		mappings: []
 	};
 	let mod = data.value;
-	mod.push(s);
+	mod.schemes.push(s);
 	store.commit('manipulate', mod);
 	newSchemeName.value = "";
 }
 
 const rmScheme = (scheme: string) => {
-	let mod = data.value.filter((val) => {
+	let mod = data.value.schemes.filter((val) => {
 		return val.name !== scheme;
 	});
 	store.commit('manipulate', mod);
@@ -94,9 +94,9 @@ const rmMapping = (trigger: Button, trigger2: Button) => {
 	});
 	console.log(mod);
 	selectedScheme.value.mappings = mod;
-	data.value.forEach((val, i) => {
+	data.value.schemes.forEach((val, i) => {
 		if (val.name === selectedScheme.value.name) {
-			data.value[i] = selectedScheme.value;
+			data.value.schemes[i] = selectedScheme.value;
 		}
 	});
 }
@@ -148,9 +148,9 @@ const addMapping = () => {
 	let mod = selectedScheme.value.mappings;
 	mod.push(m);
 	selectedScheme.value.mappings = mod;
-	data.value.forEach((val, i) => {
+	data.value.schemes.forEach((val, i) => {
 		if (val.name === selectedScheme.value.name) {
-			data.value[i] = selectedScheme.value;
+			data.value.schemes[i] = selectedScheme.value;
 		}
 	});
 	newMapTrigger.value = getOkTriggers()[0];
@@ -159,7 +159,7 @@ const addMapping = () => {
 }
 
 const exit = async () => {
-	store.commit('manipulate', [] as Instance);
+	store.commit('manipulate', { name: "", real: false, schemes: [] } as Instance);
 	await router.replace('/');
 	window.location.reload();
 }
@@ -174,7 +174,7 @@ const onLeaveActionInput = (trigger: Button, trigger2: Button) => {
 }
 
 const newMapOK = computed(() => getOkTriggers().length > 0 && getOkComboTriggers(newMapTrigger.value).length > 0);
-const exportNotOK = computed(() => data.value.length < 1);
+const exportNotOK = computed(() => data.value.schemes.length < 1);
 </script>
 
 <template>
@@ -233,7 +233,7 @@ const exportNotOK = computed(() => data.value.length < 1);
 		</template>
 		<template #body>
 			<FwbListGroup class="min-w-full">
-				<FwbListGroupItem v-for="scheme in data" class="grid grid-cols-3 gap-3">
+				<FwbListGroupItem v-for="scheme in data.schemes" class="grid grid-cols-3 gap-3">
 					<div><span>{{ scheme.name }}</span></div>
 					<div class="col-span-2 flex items-center justify-end">
 						<svg @click="() => rmScheme(scheme.name)" class="w-6 h-6 text-red-500" aria-hidden="true"
@@ -262,8 +262,8 @@ const exportNotOK = computed(() => data.value.length < 1);
 					<span class="text-white">Selected: {{ selectedScheme.name }}</span>
 					<FwbDropdown placement="bottom" text="Schemes">
 						<FwbListGroup>
-							<FwbListGroupItem v-for="scheme in data" @click="() => {
-								data.forEach(s => {
+							<FwbListGroupItem v-for="scheme in data.schemes" @click="() => {
+								data.schemes.forEach(s => {
 									if (s.name === scheme.name) selectedScheme = s;
 								});
 							}">
@@ -277,10 +277,11 @@ const exportNotOK = computed(() => data.value.length < 1);
 				</div>
 			</template>
 			<template #default>
-				<span class="text-white font-extrabold text-3xl">Controller Wizard Editor</span>
+				<span class="text-white font-extrabold text-3xl">{{ data.name }}</span>
 			</template>
 			<template #right-side>
 				<FwbButton color="blue" @click="() => showExportDialog = true">Save Diagram</FwbButton>
+				<span>&nbsp;&nbsp;&nbsp;</span>
 				<FwbButton color="red" @click="() => showExitDialog = true">Exit Editor</FwbButton>
 			</template>
 		</FwbNavbar>
