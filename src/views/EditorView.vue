@@ -6,7 +6,6 @@ import type { Button, Instance, Mapping, Scheme } from "@/schema";
 import router from "@/router";
 import fileSaver from "file-saver";
 import { exportProject } from "@/exporter";
-import { validateLocaleAndSetLanguage } from "typescript";
 
 const store = useStore();
 
@@ -92,7 +91,6 @@ const rmMapping = (trigger: Button, trigger2: Button) => {
 	let mod = selectedScheme.value.mappings.filter((val) => {
 		return val.trigger !== trigger || (val.trigger === trigger && val.trigger2 != trigger2);
 	});
-	console.log(mod);
 	selectedScheme.value.mappings = mod;
 	data.value.schemes.forEach((val, i) => {
 		if (val.name === selectedScheme.value.name) {
@@ -139,7 +137,9 @@ const newMapTrigger2Display: ComputedRef<string> = computed(() => {
 });
 const newMapLabel: Ref<string> = ref('');
 
+const newMapConfigOK = computed(() => newMapTrigger2.value == newMapTrigger.value || selectedScheme.value.mappings.filter((val) => val.trigger == newMapTrigger.value && val.trigger2 != newMapTrigger.value).length <= 3);
 const addMapping = () => {
+	if (!newMapConfigOK.value) return;
 	const m: Mapping = {
 		action: newMapLabel.value,
 		trigger: newMapTrigger.value,
@@ -154,7 +154,7 @@ const addMapping = () => {
 		}
 	});
 	newMapTrigger.value = getOkTriggers()[0];
-	newMapTrigger2.value = newMapTrigger.value;
+	newMapTrigger2.value = getOkComboTriggers(newMapTrigger.value).includes(newMapTrigger.value) ? newMapTrigger.value : getOkComboTriggers(newMapTrigger.value)[0];
 	newMapLabel.value = "";
 }
 
@@ -166,11 +166,8 @@ const exit = async () => {
 
 const onLeaveActionInput = (trigger: Button, trigger2: Button) => {
 	selectedTrigger.value = 'NONE';
-	console.log('Scanning for ' + "input_" + kebabTrigger(trigger) + "_" + kebabTrigger(trigger2));
 	const e = document.querySelector("input.input_" + kebabTrigger(trigger) + "_" + kebabTrigger(trigger2))! as HTMLInputElement;
-	console.log(e);
 	selectedScheme.value.mappings[getTriggerIndexInScheme(trigger, trigger2)].action = e.value;
-	console.log("Set to " + e.value);
 }
 
 const newMapOK = computed(() => getOkTriggers().length > 0 && getOkComboTriggers(newMapTrigger.value).length > 0);
@@ -322,9 +319,10 @@ const exportNotOK = computed(() => data.value.schemes.length < 1);
 						<div class="text-white grid grid-cols-2">
 							<span>Add New Action</span>
 							<div class="justify-items-end">
-								<svg @click="addMapping" class="w-6 h-6 text-lime-600" aria-hidden="true"
-									xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-									viewBox="0 0 24 24">
+								<svg @click="addMapping"
+									v-bind:class="['w-6 h-6', newMapConfigOK ? 'text-lime-600' : 'text-stone-700']"
+									aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+									fill="none" viewBox="0 0 24 24">
 									<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
 										stroke-width="2" d="M5 12h14m-7 7V5" />
 								</svg>
@@ -345,7 +343,7 @@ const exportNotOK = computed(() => data.value.schemes.length < 1);
 						<FwbDropdown class="inline" v-bind:text="newMapTrigger2Display" close-inside>
 							<FwbListGroup class="overflow-y-scroll max-h-48">
 								<FwbListGroupItem
-									v-if="selectedScheme.mappings.filter((val) => val.trigger == newMapTrigger && val.trigger2 == val.trigger).length < 0"
+									v-if="selectedScheme.mappings.filter((val) => val.trigger == newMapTrigger && val.trigger2 == newMapTrigger).length <= 0"
 									@click="() => newMapTrigger2 = newMapTrigger"
 									v-on:mouseover="() => selectedTrigger = 'NONE'"
 									v-on:mouseleave="() => selectedTrigger = 'NONE'">

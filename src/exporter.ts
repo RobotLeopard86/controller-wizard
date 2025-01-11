@@ -15,16 +15,16 @@ export const exportProject = (inst: Instance) => {
 			["Right Trigger", "RT"],
 			['Back', "Back"],
 			['Start', "Start"],
-			['D-Pad Up', "DPadU"],
-			['D-Pad Left', "DPadL"],
-			['D-Pad Right', "DPadR"],
-			['D-Pad Down', "DPadD"],
-			['Left Stick X', "LStk-X"],
-			['Left Stick Y', "LStk-X"],
-			['Left Stick Press', "LStkClk"],
-			['Right Stick X', "RStk-X"],
-			['Right Stick Y', "RStk-X"],
-			['Right Stick Press', "RStkClk"]
+			['D-Pad Up', "DPadUp"],
+			['D-Pad Left', "DPadLeft"],
+			['D-Pad Right', "DPadRight"],
+			['D-Pad Down', "DPadDown"],
+			['Left Stick X', "LS-X"],
+			['Left Stick Y', "LS-Y"],
+			['Left Stick Press', "LS-Press"],
+			['Right Stick X', "RS-X"],
+			['Right Stick Y', "RS-X"],
+			['Right Stick Press', "RS-Press"]
 		]);
 
 		const initialPos: Map<Button, {x: number, y: number}> = new Map([
@@ -63,9 +63,9 @@ export const exportProject = (inst: Instance) => {
 		const ctx = canvas.getContext('2d')!;
 
 		const ROW_PADDING = 7;
-		const COLUMN_PADDING = 7;
+		const COLUMN_PADDING = 10;
 		const CELL_DIMS = {x: 670, y: 91};
-		const TXT_SIZE = 16;
+		const TXT_SIZE = 28;
 		const TXT_HEIGHT = 42;
 
 		const drawController = async() => {
@@ -86,32 +86,34 @@ export const exportProject = (inst: Instance) => {
 
 			mappingsByInitTrigger.forEach((val, key) => {
 				const initPos = initialPos.get(key)!;
-				let drawTextTracker: {x: number, y: number} = initPos;
+				let drawTextTracker: {x: number, y: number} = {x: initPos.x, y: initPos.y};
 
-				let TXT_WIDTH: number = CELL_DIMS.x;
-				console.log("=== GO  " + key + " ===");
-				while((TXT_WIDTH + COLUMN_PADDING) * (val.length) > CELL_DIMS.x) {
-					TXT_WIDTH -= 2;
-					console.log(TXT_WIDTH);
-				}
-				console.log("=== END " + key + " ===");
+				let ordered = val.filter((value) => value.t != key);
+				if(ordered.length < val.length) ordered.unshift(val.filter((value) => value.t == key)[0]);
 
-				val.forEach((value) => {
+				ordered.forEach((value) => {
 					let text: string = "";
 					if(value.t == key) {
-						text = "ON PRESS";
+						text = abbr.get(value.t)!;
 					} else {
-						text = "+" + abbr.get(value.t);
+						text = "+" + abbr.get(value.t)!;
 					}
-					text += ": " + value.a;
+					text += ":" + value.a;
 
-					ctx.fillText(text, drawTextTracker.x, drawTextTracker.y, TXT_WIDTH);
+					const advance = (ctx.measureText(text).width + COLUMN_PADDING);
+					const advancePos = () => {
+						drawTextTracker.x += advance;
+						if(drawTextTracker.x > (initPos.x + CELL_DIMS.x)) {
+							drawTextTracker.x = initPos.x;
+							drawTextTracker.y += (TXT_HEIGHT + ROW_PADDING);
+						}
+					};
 
-					drawTextTracker.x += (TXT_WIDTH + COLUMN_PADDING);
-					if(drawTextTracker.x > (initPos.x + CELL_DIMS.x)) {
-						drawTextTracker.x = initPos.x;
-						drawTextTracker.y += (TXT_HEIGHT + ROW_PADDING);
-					}
+					console.log(`WILL BE ${drawTextTracker.x + advance}\nLEQUAL ${(initPos.x + CELL_DIMS.x)}\nFROM ${initPos.x} AND ${CELL_DIMS.x}`);
+					if(drawTextTracker.x + advance > (initPos.x + CELL_DIMS.x)) advancePos();
+
+					ctx.fillText(text, drawTextTracker.x, drawTextTracker.y);
+					advancePos();
 				});
 			});
 
