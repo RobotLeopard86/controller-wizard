@@ -308,7 +308,7 @@ const exportNotOK = computed(() => data.value.schemes.length < 1);
 							</div>
 							<FwbInput
 								v-bind:class="'input_' + kebabTrigger(mapping.trigger) + '_' + kebabTrigger(mapping.trigger2)"
-								class="inline" v-on:focus="() => selectedTrigger = mapping.trigger"
+								class="inline" v-on:focus="() => selectedTrigger = mapping.trigger2"
 								v-on:focusout="() => onLeaveActionInput(mapping.trigger, mapping.trigger2)"
 								placeholder="Enter an action..."
 								v-bind:value="selectedScheme.mappings[getTriggerIndexInScheme(mapping.trigger, mapping.trigger2)].action" />
